@@ -71,7 +71,7 @@ func main() {
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "websockets.html")
+		http.ServeFile(w, r, "primary_monitor.html")
 	})
 
 	go http.ListenAndServe(":8080", nil)

@@ -1,0 +1,9 @@
+[Unit]
+Description=SE Election Primary Monitor
+After=network.target nss-lookup.target
+
+[Service]
+ExecStart=/home/ec2-user/SlimPrimaryMonitor/primary_monitor
+
+[Install]
+WantedBy=multi-user.target
