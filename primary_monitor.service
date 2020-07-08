@@ -3,6 +3,7 @@ Description=SE Election Primary Monitor
 After=network.target nss-lookup.target
 
 [Service]
+WorkingDirectory=/home/ec2-user/spm
 ExecStart=/home/ec2-user/spm/primary_monitor
 
 [Install]
