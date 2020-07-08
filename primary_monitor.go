@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"math/rand"
@@ -35,6 +34,8 @@ func main() {
 	http.HandleFunc("/echo", func(w http.ResponseWriter, r *http.Request) {
 		conn, _ := upgrader.Upgrade(w, r, nil) // error ignored for sake of simplicity
 
+		fmt.Printf("WS %s: New connection\n", conn.RemoteAddr())
+
 		connections[conn] = true
 		defer delete(connections, conn)
 
@@ -42,13 +43,20 @@ func main() {
 			// Read message from browser
 			msgType, msg, err := conn.ReadMessage()
 			if err != nil {
-				fmt.Println(err)
-				return
+				switch err.(type) {
+				case (*websocket.CloseError):
+					fmt.Printf("WS %s: Closed connection\n", conn.RemoteAddr())
+					return
+				default:
+					fmt.Println(err)
+					return
+				}
 			}
 
 			switch string(msg) {
 			case "?":
-				if err = conn.WriteMessage(msgType, jsonCandidates(&candidates)); err != nil {
+				fmt.Printf("WS %s: Immediate query ('?') received", conn.RemoteAddr())
+				if err = conn.WriteJSON(candidates); err != nil {
 					fmt.Println(err)
 					return
 				}
@@ -80,15 +88,6 @@ func main() {
 		scrapeElection()
 		time.Sleep(10 * 1000000000)
 	}
-}
-
-func jsonCandidates(input *map[int]*candidate) []byte {
-	response, err := json.Marshal(input)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return response
 }
 
 func scrapeElection() {
@@ -141,14 +140,17 @@ func scrapeElection() {
 	})
 
 	if len(changedCandidates) > 0 {
-		fmt.Printf("Broadcasting to %d clients\n", len(connections))
+		go broadcastToAllClients(changedCandidates)
+	}
+}
 
-		changedCandidateJSON := jsonCandidates(&changedCandidates)
-		for connection := range connections {
-			err := connection.WriteMessage(1, changedCandidateJSON)
-			if err != nil {
-				fmt.Println(err)
-			}
+func broadcastToAllClients(input map[int]*candidate) {
+	fmt.Printf("Broadcasting to %d clients\n", len(connections))
+
+	for connection := range connections {
+		err := connection.WriteJSON(input)
+		if err != nil {
+			fmt.Println(err)
 		}
 	}
 }
